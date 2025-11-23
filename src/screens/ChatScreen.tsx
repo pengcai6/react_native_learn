@@ -1,22 +1,33 @@
 import React, { useRef } from 'react';
 import {
   View,
-  Text,
   FlatList,
-  TextInput,
-  TouchableOpacity,
-  SafeAreaView,
-  Platform,
   KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
   ListRenderItem
 } from 'react-native';
 import { useChatStore, Message } from '../store/chatStore';
-import { Menu, ArrowUp, Bot, User } from 'lucide-react-native';
+import { Menu, Bot, User, Send } from 'lucide-react-native';
 import Markdown from 'react-native-markdown-display';
+import {
+  Surface,
+  Text,
+  TextInput,
+  IconButton,
+  useTheme,
+  Avatar,
+  ActivityIndicator
+} from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ChatScreen({ navigation }: any) {
-  const { messages, inputText, setInputText, addMessage, updateLastMessage, setLoading, isLoading } = useChatStore();
+  const { sessions, currentSessionId, inputText, setInputText, addMessage, updateLastMessage, setLoading, isLoading } = useChatStore();
   const flatListRef = useRef<FlatList>(null);
+  const theme = useTheme();
+
+  const currentSession = sessions.find(s => s.id === currentSessionId);
+  const messages = currentSession ? currentSession.messages : [];
 
   const sendMessage = async () => {
     if (inputText.trim().length === 0) return;
@@ -62,36 +73,33 @@ Enjoy building your app!`;
   };
 
   const renderItem: ListRenderItem<Message> = ({ item }) => (
-    <View className={`flex-row p-4 ${item.sender === 'other' ? 'bg-transparent' : 'bg-transparent'} `}>
+    <View style={[styles.messageContainer, { backgroundColor: item.sender === 'other' ? 'transparent' : 'transparent' }]}>
       {/* Avatar */}
-      <View className={`w-8 h-8 rounded-sm items-center justify-center mr-3 ${item.sender === 'me' ? 'bg-transparent' : 'bg-green-500 rounded-full'}`}>
+      <View style={styles.avatarContainer}>
         {item.sender === 'me' ? (
-           // User usually doesn't show avatar in ChatGPT mobile, but let's keep a placeholder or nothing
-           <View className="bg-gray-500 w-8 h-8 rounded-full items-center justify-center">
-             <User color="white" size={16} />
-           </View>
+           <Avatar.Icon size={32} icon={() => <User color="white" size={20} />} style={{ backgroundColor: theme.colors.secondary }} />
         ) : (
-          <Bot color="white" size={18} />
+          <Avatar.Icon size={32} icon={() => <Bot color="white" size={20} />} style={{ backgroundColor: theme.colors.primary }} />
         )}
       </View>
       
       {/* Content */}
-      <View className="flex-1 pt-1">
-        <Text className="font-bold text-gray-800 mb-1 text-sm">
+      <View style={styles.messageContent}>
+        <Text style={[styles.senderName, { color: theme.colors.onSurfaceVariant }]}>
             {item.sender === 'me' ? 'You' : 'ChatGPT'}
         </Text>
         {item.sender === 'other' ? (
           <Markdown
             style={{
-              body: { color: '#374151', fontSize: 16, lineHeight: 24 },
-              code_inline: { backgroundColor: '#f3f4f6', padding: 2, borderRadius: 4, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-              fence: { backgroundColor: '#f3f4f6', padding: 10, borderRadius: 8, marginVertical: 8 },
+              body: { color: theme.colors.onSurface, fontSize: 16, lineHeight: 24 },
+              code_inline: { backgroundColor: theme.colors.surfaceVariant, padding: 2, borderRadius: 4, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+              fence: { backgroundColor: theme.colors.surfaceVariant, padding: 10, borderRadius: 8, marginVertical: 8 },
             }}
           >
             {item.text + (item.isStreaming && isLoading && item.id === messages[messages.length-1].id ? ' ▍' : '')}
           </Markdown>
         ) : (
-          <Text className="text-base text-gray-800 leading-6">
+          <Text style={{ fontSize: 16, lineHeight: 24, color: theme.colors.onSurface }}>
             {item.text}
           </Text>
         )}
@@ -100,60 +108,122 @@ Enjoy building your app!`;
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-2 border-b border-gray-100 bg-white z-10">
-        <TouchableOpacity onPress={() => navigation.openDrawer()}>
-          <Menu color="black" size={24} />
-        </TouchableOpacity>
-        <View className="flex-row items-center">
-            <Text className="text-base font-semibold text-gray-700">ChatGPT 4o</Text>
+    <Surface style={styles.container}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: theme.colors.outlineVariant }]}>
+          <IconButton
+            icon={() => <Menu color={theme.colors.onSurface} size={24} />}
+            onPress={() => navigation.openDrawer()}
+          />
+          <Text variant="titleMedium" style={{ flex: 1, textAlign: 'center' }}>ChatGPT 4o</Text>
+          <View style={{ width: 48 }} /> 
         </View>
-        <View className="w-6" /> 
-      </View>
 
-      {/* Chat List */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        className="flex-1"
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-      >
-        <FlatList
+        {/* Chat Area */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          style={{ flex: 1 }}
+        >
+          <FlatList
             ref={flatListRef}
             data={messages}
             renderItem={renderItem}
             keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 20 }}
+            contentContainerStyle={styles.chatList}
             onContentSizeChange={scrollToBottom}
             onLayout={scrollToBottom}
-        />
+          />
 
-        {/* Input Area */}
-        <View className="p-4 bg-white border-t border-gray-100">
-          <View className="flex-row items-end bg-gray-100 rounded-3xl p-2">
-             <TextInput
-                className="flex-1 max-h-32 min-h-[40px] text-base text-black px-3 py-2"
+          {/* Input Area */}
+          <View style={[styles.inputContainer, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.outlineVariant }]}>
+            <View style={[styles.inputWrapper, { backgroundColor: theme.colors.surfaceVariant }]}>
+              <TextInput
+                mode="flat"
                 placeholder="Message ChatGPT..."
-                placeholderTextColor="#6b7280"
                 value={inputText}
                 onChangeText={setInputText}
+                style={[styles.input, { backgroundColor: 'transparent' }]}
+                underlineColor="transparent"
+                activeUnderlineColor="transparent"
+                textColor={theme.colors.onSurface}
+                placeholderTextColor={theme.colors.onSurfaceDisabled}
                 multiline
-                textAlignVertical="center"
               />
-              <TouchableOpacity
+              <IconButton
+                icon={() => isLoading ? <ActivityIndicator size={20} /> : <Send color={inputText.length > 0 ? theme.colors.primary : theme.colors.onSurfaceDisabled} size={20} />}
                 onPress={sendMessage}
-                className={`p-2 rounded-full mb-1 mr-1 ${inputText.trim().length > 0 ? 'bg-black' : 'bg-gray-300'}`}
-                disabled={inputText.trim().length === 0}
-              >
-                 <ArrowUp color="white" size={20} />
-              </TouchableOpacity>
+                disabled={isLoading || inputText.length === 0}
+                style={styles.sendButton}
+              />
+            </View>
+            <Text style={[styles.footerText, { color: theme.colors.onSurfaceDisabled }]}>
+              ChatGPT can make mistakes. Check important info.
+            </Text>
           </View>
-          <Text className="text-center text-xs text-gray-400 mt-2">
-            ChatGPT can make mistakes. Check important info.
-          </Text>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </Surface>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+  },
+  chatList: {
+    paddingVertical: 16,
+  },
+  messageContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  avatarContainer: {
+    marginRight: 12,
+    paddingTop: 2,
+  },
+  messageContent: {
+    flex: 1,
+  },
+  senderName: {
+    fontWeight: 'bold',
+    marginBottom: 4,
+    fontSize: 14,
+  },
+  inputContainer: {
+    padding: 16,
+    borderTopWidth: 1,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 24,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  input: {
+    flex: 1,
+    maxHeight: 100,
+    fontSize: 16,
+  },
+  sendButton: {
+    margin: 0,
+  },
+  footerText: {
+    textAlign: 'center',
+    fontSize: 12,
+    marginTop: 8,
+  },
+});

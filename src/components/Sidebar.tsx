@@ -1,53 +1,169 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
+import { Text, TouchableRipple, useTheme, Avatar, IconButton } from 'react-native-paper';
 import { useChatStore } from '../store/chatStore';
-import { Plus, MessageSquare, Settings, User } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Plus, MessageSquare, Settings, User, Trash2 } from 'lucide-react-native';
 
 export default function Sidebar({ navigation }: any) {
-  const clearMessages = useChatStore((state) => state.clearMessages);
+  const { sessions, currentSessionId, createNewSession, selectSession, deleteSession } = useChatStore();
+  const theme = useTheme();
 
   const handleNewChat = () => {
-    clearMessages();
+    createNewSession();
     navigation.closeDrawer();
   };
 
+  const handleSelectSession = (id: string) => {
+    selectSession(id);
+    navigation.closeDrawer();
+  };
+
+  // ChatGPT-like dark sidebar colors
+  const sidebarBackgroundColor = '#202123';
+  const sidebarTextColor = '#ECECF1';
+  const sidebarHoverColor = '#2A2B32';
+
   return (
-    <SafeAreaView className="flex-1 bg-gray-900">
-      <View className="flex-1 p-4">
-        {/* New Chat Button */}
-        <TouchableOpacity
-          onPress={handleNewChat}
-          className="flex-row items-center p-3 border border-gray-700 rounded-md mb-4 bg-gray-800"
-        >
-          <Plus color="white" size={20} className="mr-2" />
-          <Text className="text-white font-medium">New chat</Text>
-        </TouchableOpacity>
+    <View style={[styles.container, { backgroundColor: sidebarBackgroundColor }]}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.content}>
+          {/* New Chat Button */}
+          <TouchableRipple
+            onPress={handleNewChat}
+            style={[styles.newChatButton, { borderColor: 'rgba(255,255,255,0.2)' }]}
+            rippleColor="rgba(255, 255, 255, .1)"
+          >
+            <View style={styles.newChatContent}>
+              <Plus color={sidebarTextColor} size={16} style={styles.icon} />
+              <Text variant="bodyMedium" style={{ color: sidebarTextColor }}>New chat</Text>
+            </View>
+          </TouchableRipple>
 
-        {/* History Section (Mock) */}
-        <View className="flex-1">
-          <Text className="text-gray-500 text-xs font-bold mb-2 px-2">Today</Text>
-          <TouchableOpacity className="flex-row items-center p-3 rounded-md hover:bg-gray-800">
-            <MessageSquare color="gray" size={18} className="mr-2" />
-            <Text className="text-gray-300 text-sm truncate">React Native Chat App</Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="flex-row items-center p-3 rounded-md hover:bg-gray-800">
-            <MessageSquare color="gray" size={18} className="mr-2" />
-            <Text className="text-gray-300 text-sm truncate">Tailwind CSS Tips</Text>
-          </TouchableOpacity>
-        </View>
+          {/* History Section */}
+          <View style={styles.historySection}>
+            <Text variant="labelSmall" style={[styles.sectionTitle, { color: '#8E8EA0' }]}>History</Text>
+            <ScrollView style={styles.historyList}>
+              {sessions.map((session) => (
+                <TouchableRipple
+                  key={session.id}
+                  onPress={() => handleSelectSession(session.id)}
+                  style={[
+                    styles.historyItem,
+                    session.id === currentSessionId && { backgroundColor: '#343541' }
+                  ]}
+                  rippleColor="rgba(255, 255, 255, .1)"
+                >
+                  <View style={styles.historyItemContent}>
+                    <MessageSquare size={16} color={sidebarTextColor} style={styles.historyIcon} />
+                    <Text
+                      numberOfLines={1}
+                      style={[styles.historyText, { color: sidebarTextColor }]}
+                    >
+                      {session.title || 'New Chat'}
+                    </Text>
+                    {session.id === currentSessionId && (
+                        <Trash2 
+                            size={14} 
+                            color="#8E8EA0" 
+                            onPress={() => deleteSession(session.id)}
+                            style={{ marginLeft: 'auto' }}
+                        />
+                    )}
+                  </View>
+                </TouchableRipple>
+              ))}
+            </ScrollView>
+          </View>
 
-        {/* Bottom Menu */}
-        <View className="border-t border-gray-700 pt-2">
-          <TouchableOpacity className="flex-row items-center p-3 rounded-md">
-            <User color="white" size={20} className="mr-2" />
-            <Text className="text-white text-sm">Upgrade to Plus</Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="flex-row items-center p-3 rounded-md">
-            <Settings color="white" size={20} className="mr-2" />
-            <Text className="text-white text-sm">Settings</Text>
-          </TouchableOpacity>
+          {/* Bottom Menu */}
+          <View style={[styles.bottomMenu, { borderTopColor: 'rgba(255,255,255,0.2)' }]}>
+            <TouchableRipple onPress={() => {}} style={styles.menuItem}>
+                <View style={styles.menuItemContent}>
+                    <User size={16} color={sidebarTextColor} style={styles.menuIcon} />
+                    <Text style={{ color: sidebarTextColor }}>Upgrade to Plus</Text>
+                </View>
+            </TouchableRipple>
+            <TouchableRipple onPress={() => {}} style={styles.menuItem}>
+                <View style={styles.menuItemContent}>
+                    <Settings size={16} color={sidebarTextColor} style={styles.menuIcon} />
+                    <Text style={{ color: sidebarTextColor }}>Settings</Text>
+                </View>
+            </TouchableRipple>
+          </View>
         </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    padding: 12,
+  },
+  newChatButton: {
+    borderWidth: 1,
+    borderRadius: 6,
+    marginBottom: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+  },
+  newChatContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  icon: {
+    marginRight: 12,
+  },
+  historySection: {
+    flex: 1,
+  },
+  sectionTitle: {
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    fontWeight: '500',
+  },
+  historyList: {
+    flex: 1,
+  },
+  historyItem: {
+    borderRadius: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginBottom: 4,
+  },
+  historyItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  historyIcon: {
+    marginRight: 12,
+  },
+  historyText: {
+    flex: 1,
+    fontSize: 14,
+  },
+  bottomMenu: {
+    borderTopWidth: 1,
+    paddingTop: 8,
+  },
+  menuItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  menuItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  menuIcon: {
+    marginRight: 12,
+  }
+});
