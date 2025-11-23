@@ -1,12 +1,7 @@
-import "./global.css"
-import { Text, View } from "react-native";
- 
+import "./global.css";
+import React from 'react';
+import AppNavigator from './src/navigation/AppNavigator';
+
 export default function App() {
-  return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="bg-white ">
-        Welcome to Nativewind!
-      </Text>
-    </View>
-  );
+  return <AppNavigator />;
 }
